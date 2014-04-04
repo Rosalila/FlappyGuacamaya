@@ -21,7 +21,10 @@ import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
@@ -54,6 +57,8 @@ public class TallerPlatformer extends GdxTest {
 		boolean facesRight = true;
 		boolean grounded = false;
 	}
+	
+	final static float TILE_SIZE=64;
 
 	private TiledMap map;
 	private OrthogonalTiledMapRenderer renderer;
@@ -70,6 +75,8 @@ public class TallerPlatformer extends GdxTest {
 	Sprite intro;
 	static int score; 
 	SpriteBatch batch;
+	Sprite game_bg;
+	Stage stage_menu;
 	
 	String screen="intro";
 	private Pool<Rectangle> rectPool = new Pool<Rectangle>() {
@@ -110,8 +117,8 @@ public class TallerPlatformer extends GdxTest {
 		// figure out the width and height of the koala for collision
 		// detection and rendering by converting a koala frames pixel
 		// size into world units (1 unit == 16 pixels)
-		Koala.WIDTH = 1 / 16f * g01.getRegionWidth();
-		Koala.HEIGHT = 1 / 16f * g01.getRegionHeight();
+		Koala.WIDTH = 1 / TILE_SIZE * g01.getRegionWidth();
+		Koala.HEIGHT = 1 / TILE_SIZE * g01.getRegionHeight();
 //		Koala.HEIGHT = 1 / 16f * regions[0].getRegionWidth();
 //		Koala.WIDTH = 1 / 16f * regions[0].getRegionHeight();
 		
@@ -135,13 +142,31 @@ public class TallerPlatformer extends GdxTest {
 		stage = new Stage();
 		stage.addActor(score_label);
 		
+		Texture game_bg_texture=new Texture("game_bg.png");
+		game_bg_texture.setFilter(TextureFilter.Linear, TextureFilter.Linear);
+		game_bg = new Sprite(new TextureRegion(game_bg_texture,320,480));
+		
+		stage_menu = new Stage();
+		Gdx.input.setInputProcessor(stage_menu);
+		
+		Image button1 = new Image(new Texture("menu/button.png"));
+		button1.addListener(new InputListener(){
+			@Override
+			public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				screen="game";
+				return true;
+			}
+		});
+		
+		stage_menu.addActor(button1);
+		
 		initLevel(1);
 		
 		batch = new SpriteBatch();
 		
 		// create the Koala we want to move around the world
 		koala = new Koala();
-		koala.position.set(20, 15);
+		koala.position.set(0, 9);
 		
 		Music oggMusic = Gdx.audio.newMusic(Gdx.files.internal("music.ogg"));
 		oggMusic.play();
@@ -163,12 +188,12 @@ public class TallerPlatformer extends GdxTest {
 //		}
 		// load the map, set the unit scale to 1/16 (1 unit == 16 pixels)
 		map = new TmxMapLoader().load("level"+level+".tmx");
-		renderer = new OrthogonalTiledMapRenderer(map, 1 / 16f);
+		renderer = new OrthogonalTiledMapRenderer(map, 1 / TILE_SIZE);
 
 		// create an orthographic camera, shows us 30x20 units of the world
 		camera = new OrthographicCamera();
 //		camera.setToOrtho(false, 30, 20);
-		camera.setToOrtho(false, 20, 30);
+		camera.setToOrtho(false, 10, 15);
 		camera.update();
 	}
 
@@ -184,6 +209,7 @@ public class TallerPlatformer extends GdxTest {
 		if(screen=="game")
 		{
 			renderGame(deltaTime);
+			stage.draw();
 		}
 		
 		if(screen=="intro")
@@ -192,7 +218,10 @@ public class TallerPlatformer extends GdxTest {
 			renderIntro();
 		}
 		
-		stage.draw();
+		if(screen=="menu")
+		{
+			stage_menu.draw();
+		}
 	}
 	
 	void renderIntro()
@@ -205,7 +234,7 @@ public class TallerPlatformer extends GdxTest {
 	void logicIntro()
 	{
 		if((Gdx.input.isKeyPressed(Keys.SPACE) || isTouched(0.0f, 1))) {
-			screen="game";
+			screen="menu";
 			score=0;
 			score_label.setText("Score: "+score);
 		}
@@ -214,7 +243,7 @@ public class TallerPlatformer extends GdxTest {
 	void gameOver()
 	{
 		screen="intro";
-		koala.position.set(20, 15);
+		koala.position.set(0, 14);
 		initLevel(1);
 	}
 	
@@ -224,8 +253,13 @@ public class TallerPlatformer extends GdxTest {
 		updateKoala(deltaTime);
 
 		// let the camera follow the koala, x-axis only
-		camera.position.x = koala.position.x+9f;
+		camera.position.x = koala.position.x+4f;
 		camera.update();
+		
+		//Render the bg
+		batch.begin();
+		game_bg.draw(batch);
+		batch.end();
 
 		// set the tile map rendere view based on what the
 		// camera sees and render the map
@@ -285,13 +319,19 @@ public class TallerPlatformer extends GdxTest {
 		Rectangle koalaRect = rectPool.obtain();
 		koalaRect.set(koala.position.x, koala.position.y, Koala.WIDTH, Koala.HEIGHT);
 		int startX, startY, endX, endY;
-		if(koala.velocity.x > 0) {
-			startX = endX = (int)(koala.position.x + Koala.WIDTH + koala.velocity.x);
-		} else {
-			startX = endX = (int)(koala.position.x + koala.velocity.x);
-		}
-		startY = (int)(koala.position.y);
-		endY = (int)(koala.position.y + Koala.HEIGHT);
+//		if(koala.velocity.x > 0) {
+//			startX = endX = (int)(koala.position.x + Koala.WIDTH + koala.velocity.x);
+//		} else {
+//			startX = endX = (int)(koala.position.x + koala.velocity.x);
+//		}
+//		startY = (int)(koala.position.y);
+//		endY = (int)(koala.position.y + Koala.HEIGHT);
+		startX = (int)(koala.position.x + koala.velocity.x);
+		endX = (int)(koala.position.x + Koala.WIDTH + koala.velocity.x);
+		
+		startY = (int)(koala.position.y + koala.velocity.y);
+		endY = (int)(koala.position.y + Koala.HEIGHT + koala.velocity.y);
+		
 		getTiles(startX, startY, endX, endY, tiles,1);
 		koalaRect.x += koala.velocity.x;
 		for(Rectangle tile: tiles) {
@@ -303,37 +343,43 @@ public class TallerPlatformer extends GdxTest {
 		}
 		koalaRect.x = koala.position.x;
 
-		// if the koala is moving upwards, check the tiles to the top of it's
-		// top bounding box edge, otherwise check the ones to the bottom
-		if(koala.velocity.y > 0) {
-			startY = endY = (int)(koala.position.y + Koala.HEIGHT + koala.velocity.y);
-		} else {
-			startY = endY = (int)(koala.position.y + koala.velocity.y);
-		}
-		startX = (int)(koala.position.x);
-		endX = (int)(koala.position.x + Koala.WIDTH);
-		getTiles(startX, startY, endX, endY, tiles,1);
-		koalaRect.y += koala.velocity.y;
-		for(Rectangle tile: tiles) {
-			if(koalaRect.overlaps(tile)) {
-				// we actually reset the koala y-position here
-				// so it is just below/above the tile we collided with
-				// this removes bouncing :)
-				if(koala.velocity.y > 0) {
-					koala.position.y = tile.y - Koala.HEIGHT;
-					// we hit a block jumping upwards, let's destroy it!
-					TiledMapTileLayer layer = (TiledMapTileLayer)map.getLayers().get(1);
-//					layer.setCell((int)tile.x, (int)tile.y, null);
-				} else {
-					koala.position.y = tile.y + tile.height;
-					// if we hit the ground, mark us as grounded so we can jump
-					koala.grounded = true;
-				}
-				koala.velocity.y = 0;
-				break;
-			}
-		}
+//		// if the koala is moving upwards, check the tiles to the top of it's
+//		// top bounding box edge, otherwise check the ones to the bottom
+//		if(koala.velocity.y > 0) {
+//			startY = endY = (int)(koala.position.y + Koala.HEIGHT + koala.velocity.y);
+//		} else {
+//			startY = endY = (int)(koala.position.y + koala.velocity.y);
+//		}
+//		startX = (int)(koala.position.x);
+//		endX = (int)(koala.position.x + Koala.WIDTH);
+//		getTiles(startX, startY, endX, endY, tiles,1);
+//		koalaRect.y += koala.velocity.y;
+//		for(Rectangle tile: tiles) {
+//			if(koalaRect.overlaps(tile)) {
+//				// we actually reset the koala y-position here
+//				// so it is just below/above the tile we collided with
+//				// this removes bouncing :)
+//				if(koala.velocity.y > 0) {
+//					koala.position.y = tile.y - Koala.HEIGHT;
+//					// we hit a block jumping upwards, let's destroy it!
+//					TiledMapTileLayer layer = (TiledMapTileLayer)map.getLayers().get(1);
+////					layer.setCell((int)tile.x, (int)tile.y, null);
+//				} else {
+//					koala.position.y = tile.y + tile.height;
+//					// if we hit the ground, mark us as grounded so we can jump
+//					koala.grounded = true;
+//				}
+//				koala.velocity.y = 0;
+//				break;
+//			}
+//		}
 		//Inicio cambio
+		startX = (int)(koala.position.x + koala.velocity.x);
+		endX = (int)(koala.position.x + Koala.WIDTH + koala.velocity.x);
+		
+		startY = (int)(koala.position.y + koala.velocity.y);
+		endY = (int)(koala.position.y + Koala.HEIGHT + koala.velocity.y);
+		
 		getTiles(startX, startY, endX, endY, tiles,2);
 		for(Rectangle tile: tiles) {
 			if(koalaRect.overlaps(tile)) {
@@ -357,10 +403,10 @@ public class TallerPlatformer extends GdxTest {
 		
 		
 		//No salirse
-		if(koala.position.y<0)
-			koala.position.y=0;
-		if(koala.position.y>29)
-			koala.position.y=29;
+		if(koala.position.y<=2)
+			gameOver();
+		if(koala.position.y>14)
+			koala.position.y=14;
 	}
 
 	private boolean isTouched(float startX, float endX) {
