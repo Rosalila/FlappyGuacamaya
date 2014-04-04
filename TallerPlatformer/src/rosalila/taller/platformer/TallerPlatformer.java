@@ -1,7 +1,10 @@
 package rosalila.taller.platformer;
 
+import java.util.ArrayList;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL10;
@@ -60,25 +63,31 @@ public class TallerPlatformer extends GdxTest {
 	
 	final static float TILE_SIZE=64;
 
-	private TiledMap map;
-	private OrthogonalTiledMapRenderer renderer;
-	private OrthographicCamera camera;
+	private static TiledMap map;
+	private static OrthogonalTiledMapRenderer renderer;
+	private static OrthographicCamera camera;
 //	private Texture koalaTexture;
 //	private Animation stand;
 //	private Animation walk;
 //	private Animation jump;
 	private Animation fly;
-	private Koala koala;
+	Skin uiSkin;
+	static private Koala koala;
 	BitmapFont font;
 	Label score_label;
 	Stage stage;
 	Sprite intro;
-	static int score; 
+	static int score=0;
+	static int current_level=1;
 	SpriteBatch batch;
 	Sprite game_bg;
 	Stage stage_menu;
 	
-	String screen="intro";
+	static String screen="intro";
+	
+	ArrayList<Label>score_labels;
+	
+	Preferences prefs;
 	private Pool<Rectangle> rectPool = new Pool<Rectangle>() {
 		@Override
 		protected Rectangle newObject () {
@@ -95,6 +104,12 @@ public class TallerPlatformer extends GdxTest {
 		float w = Gdx.graphics.getWidth();
 		float h = Gdx.graphics.getHeight();
 		score = 0;
+		current_level = 1;
+		
+		score_labels=new ArrayList<Label>();
+		
+		initPrefs();
+		
 //		// load the koala frames, split them, and assign them to Animations
 //		koalaTexture = new Texture("koalio.png");
 //		koalaTexture.setFilter(TextureFilter.Linear, TextureFilter.Linear);
@@ -129,13 +144,12 @@ public class TallerPlatformer extends GdxTest {
 		
 		//Text
 		font = new BitmapFont(Gdx.files.internal("data/default.fnt"),false);
-		Skin uiSkin;
 		uiSkin = new Skin();
 		uiSkin.add("default", new BitmapFont());
 		//Label style
 		LabelStyle label_syle = new LabelStyle();
 		label_syle.font = font;
-		label_syle.fontColor = Color.WHITE;
+		label_syle.fontColor = Color.BLACK;
 		uiSkin.add("default", label_syle);
 		score_label = new Label("Score: "+score,uiSkin);
 		
@@ -145,22 +159,33 @@ public class TallerPlatformer extends GdxTest {
 		Texture game_bg_texture=new Texture("game_bg.png");
 		game_bg_texture.setFilter(TextureFilter.Linear, TextureFilter.Linear);
 		game_bg = new Sprite(new TextureRegion(game_bg_texture,320,480));
+		game_bg.setSize(w, h);
 		
 		stage_menu = new Stage();
 		Gdx.input.setInputProcessor(stage_menu);
 		
-		Image button1 = new Image(new Texture("menu/button.png"));
-		button1.addListener(new InputListener(){
-			@Override
-			public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
-				screen="game";
-				return true;
+		int level_temp=1;
+		int spacing_x=110;
+		int spacing_y=110;
+		int row_position_temp=spacing_y*3+50;
+		for(int y=0;y<4;y++)
+		{
+			for(int x=0;x<3;x++)
+			{
+				Image button=getLevelButton(level_temp);
+				button.setPosition(x*spacing_x, row_position_temp);
+				stage_menu.addActor(button);
+				
+				Label label=new Label("",uiSkin);
+				label.setPosition(x*spacing_x, row_position_temp-10);
+				label.setFontScale(0.7f);
+				stage_menu.addActor(label);
+				score_labels.add(label);
+				
+				level_temp++;
 			}
-		});
-		
-		stage_menu.addActor(button1);
-		
-		initLevel(1);
+			row_position_temp-=spacing_y;
+		}
 		
 		batch = new SpriteBatch();
 		
@@ -170,10 +195,20 @@ public class TallerPlatformer extends GdxTest {
 		
 		Music oggMusic = Gdx.audio.newMusic(Gdx.files.internal("music.ogg"));
 		oggMusic.play();
+		updateScores();
 	}
 	
-	void initLevel(int level)
+	Image getLevelButton(int level)
 	{
+		Image button = new Image(new Texture("menu/button.png"));
+		button.addListener(new MenuButtonListener(level));
+		return button;
+	}
+	
+	static void initLevel(int level)
+	{
+		koala.position.set(0, 9);
+		koala.velocity.y=koala.JUMP_VELOCITY;
 		if(map!=null)
 		{
 			map.dispose();
@@ -206,10 +241,16 @@ public class TallerPlatformer extends GdxTest {
 		// get the delta time
 		float deltaTime = Gdx.graphics.getDeltaTime();
 		
+		//Render the bg
+		batch.begin();
+		game_bg.draw(batch);
+		batch.end();
+		
 		if(screen=="game")
 		{
 			renderGame(deltaTime);
 			stage.draw();
+			Gdx.app.log("MyTag", "my informative message"+koala.position.y);
 		}
 		
 		if(screen=="intro")
@@ -243,8 +284,9 @@ public class TallerPlatformer extends GdxTest {
 	void gameOver()
 	{
 		screen="intro";
-		koala.position.set(0, 14);
-		initLevel(1);
+		if(getScore(current_level)<score)
+			setScore(current_level, score);
+		updateScores();
 	}
 	
 	void renderGame(float deltaTime)
@@ -255,11 +297,6 @@ public class TallerPlatformer extends GdxTest {
 		// let the camera follow the koala, x-axis only
 		camera.position.x = koala.position.x+4f;
 		camera.update();
-		
-		//Render the bg
-		batch.begin();
-		game_bg.draw(batch);
-		batch.end();
 
 		// set the tile map rendere view based on what the
 		// camera sees and render the map
@@ -462,5 +499,37 @@ public class TallerPlatformer extends GdxTest {
 
 	@Override
 	public void dispose () {
+	}
+	
+	public void resize(int width, int height) {
+	    // TODO Auto-generated method stub
+	    stage.setViewport(320, 480, true);
+	    stage_menu.setViewport(320, 480, true);
+	}
+	
+	void setScore(int level, int score)
+	{
+		prefs.putInteger(""+level, score);
+		prefs.flush();
+	}
+	
+	int getScore(int level)
+	{
+		return prefs.getInteger(""+level, 0);
+	}
+	
+	void initPrefs()
+	{
+		prefs = Gdx.app.getPreferences("scores");
+	}
+	
+	void updateScores()
+	{
+		int i=1;
+		for(Label l: score_labels)
+		{
+			  l.setText(""+getScore(i)+"pts");
+			  i++;
+		}
 	}
 }
