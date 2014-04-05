@@ -43,8 +43,8 @@ public class TallerPlatformer extends GdxTest {
 	{
 		static float WIDTH;
 		static float HEIGHT;
-		static float MAX_VELOCITY = 10f;
-		static float JUMP_VELOCITY = 30f;
+		static float MAX_VELOCITY = 5f;
+		static float JUMP_VELOCITY = 17f;
 		static float DAMPING = 0.87f;
 
 		enum State {
@@ -74,14 +74,19 @@ public class TallerPlatformer extends GdxTest {
 	Skin uiSkin;
 	static private Koala koala;
 	BitmapFont font;
+	Label total_score_label;
 	Label score_label;
-	Stage stage;
+	Stage stage_game;
 	Sprite intro;
 	static int score=0;
 	static int current_level=1;
 	SpriteBatch batch;
 	Sprite game_bg;
 	Stage stage_menu;
+	Image continue_game_over;
+	boolean touch_up_flag=false;
+	boolean game_over=false;
+	boolean tap_flag=false;
 	
 	static String screen="intro";
 	
@@ -110,24 +115,14 @@ public class TallerPlatformer extends GdxTest {
 		
 		initPrefs();
 		
-//		// load the koala frames, split them, and assign them to Animations
-//		koalaTexture = new Texture("koalio.png");
-//		koalaTexture.setFilter(TextureFilter.Linear, TextureFilter.Linear);
-//		//koalaTexture.setFilter(minFilter, magFilter)
-//		TextureRegion[] regions = TextureRegion.split(koalaTexture, 18, 26)[0];
-//		stand = new Animation(0, regions[0]);
-//		jump = new Animation(0, regions[1]);
-//		walk = new Animation(0.15f, regions[2], regions[3], regions[4]);
-//		walk.setPlayMode(Animation.LOOP_PINGPONG);
-		
 		TextureRegion g01 = new TextureRegion(new Texture("guacamaya/01.png"));
 		TextureRegion g02 = new TextureRegion(new Texture("guacamaya/02.png"));
 		TextureRegion g03 = new TextureRegion(new Texture("guacamaya/03.png"));
 		TextureRegion g04 = new TextureRegion(new Texture("guacamaya/04.png"));
 		TextureRegion g05 = new TextureRegion(new Texture("guacamaya/05.png"));
 		
-		fly = new Animation(0.15f, g01, g02, g03, g04, g05);
-		fly.setPlayMode(Animation.LOOP_PINGPONG);
+		fly = new Animation(0.10f, g01, g02, g03, g04, g05);
+		fly.setPlayMode(Animation.LOOP);
 
 		// figure out the width and height of the koala for collision
 		// detection and rendering by converting a koala frames pixel
@@ -153,8 +148,25 @@ public class TallerPlatformer extends GdxTest {
 		uiSkin.add("default", label_syle);
 		score_label = new Label("Score: "+score,uiSkin);
 		
-		stage = new Stage();
-		stage.addActor(score_label);
+		stage_game = new Stage();
+		stage_game.addActor(score_label);
+		
+		continue_game_over = new Image(new Texture("continue.png"));
+		continue_game_over.setVisible(false);
+		continue_game_over.addListener(new InputListener(){
+			@Override
+			public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				if(getScore(current_level)<score)
+					setScore(current_level, score);
+				updateScores();
+				continue_game_over.setVisible(false);
+				game_over=false;
+				screen="intro";
+				Gdx.input.setInputProcessor(stage_menu);
+				return true;
+			}
+		});
+		stage_game.addActor(continue_game_over);
 		
 		Texture game_bg_texture=new Texture("game_bg.png");
 		game_bg_texture.setFilter(TextureFilter.Linear, TextureFilter.Linear);
@@ -165,6 +177,8 @@ public class TallerPlatformer extends GdxTest {
 		Gdx.input.setInputProcessor(stage_menu);
 		
 		int level_temp=1;
+		int offset_x=20;
+		int offset_y=20;
 		int spacing_x=110;
 		int spacing_y=110;
 		int row_position_temp=spacing_y*3+50;
@@ -173,11 +187,11 @@ public class TallerPlatformer extends GdxTest {
 			for(int x=0;x<3;x++)
 			{
 				Image button=getLevelButton(level_temp);
-				button.setPosition(x*spacing_x, row_position_temp);
+				button.setPosition(x*spacing_x+offset_x, row_position_temp+offset_y);
 				stage_menu.addActor(button);
 				
 				Label label=new Label("",uiSkin);
-				label.setPosition(x*spacing_x, row_position_temp-10);
+				label.setPosition(x*spacing_x+offset_x, row_position_temp-10+offset_y);
 				label.setFontScale(0.7f);
 				stage_menu.addActor(label);
 				score_labels.add(label);
@@ -186,12 +200,16 @@ public class TallerPlatformer extends GdxTest {
 			}
 			row_position_temp-=spacing_y;
 		}
+		total_score_label=new Label("", uiSkin);
+		total_score_label.setY(total_score_label.getY()+15);
+		stage_menu.addActor(total_score_label);
 		
 		batch = new SpriteBatch();
 		
 		// create the Koala we want to move around the world
 		koala = new Koala();
-		koala.position.set(0, 9);
+		koala.position.set(0, 7);
+		koala.velocity.y=0;
 		
 		Music oggMusic = Gdx.audio.newMusic(Gdx.files.internal("music.ogg"));
 		oggMusic.play();
@@ -201,14 +219,14 @@ public class TallerPlatformer extends GdxTest {
 	Image getLevelButton(int level)
 	{
 		Image button = new Image(new Texture("menu/button.png"));
-		button.addListener(new MenuButtonListener(level));
+		button.addListener(new MenuButtonListener(level,button));
 		return button;
 	}
 	
 	static void initLevel(int level)
 	{
-		koala.position.set(0, 9);
-		koala.velocity.y=koala.JUMP_VELOCITY;
+		koala.position.set(0, 7);
+		koala.velocity.y=0;
 		if(map!=null)
 		{
 			map.dispose();
@@ -249,8 +267,7 @@ public class TallerPlatformer extends GdxTest {
 		if(screen=="game")
 		{
 			renderGame(deltaTime);
-			stage.draw();
-			Gdx.app.log("MyTag", "my informative message"+koala.position.y);
+			stage_game.draw();
 		}
 		
 		if(screen=="intro")
@@ -274,19 +291,26 @@ public class TallerPlatformer extends GdxTest {
 	
 	void logicIntro()
 	{
-		if((Gdx.input.isKeyPressed(Keys.SPACE) || isTouched(0.0f, 1))) {
+		if((Gdx.input.isKeyPressed(Keys.SPACE) || isTouched(0.0f, 1))&& touch_up_flag)
+		{			
 			screen="menu";
 			score=0;
 			score_label.setText("Score: "+score);
+			touch_up_flag=false;
+		}
+		
+		if( !isTouched(0.0f, 1))
+		{
+			touch_up_flag=true;
 		}
 	}
 	
 	void gameOver()
 	{
-		screen="intro";
-		if(getScore(current_level)<score)
-			setScore(current_level, score);
-		updateScores();
+		tap_flag=false;
+		Gdx.input.setInputProcessor(stage_game);
+		game_over=true;
+		continue_game_over.setVisible(true);
 	}
 	
 	void renderGame(float deltaTime)
@@ -310,42 +334,42 @@ public class TallerPlatformer extends GdxTest {
 	private Vector2 tmp = new Vector2();
 	private void updateKoala(float deltaTime) {
 		if(deltaTime == 0) return;
-		koala.stateTime += deltaTime;	
-
-		// check input and apply to velocity & state
-		if((Gdx.input.isKeyPressed(Keys.SPACE) || isTouched(0.0f, 1)) /*&& koala.grounded*/) {
-			koala.velocity.y = Koala.JUMP_VELOCITY;
-			koala.state = Koala.State.Jumping;
-			koala.grounded = false;
-			screen="game";
+		koala.stateTime += deltaTime;
+		
+		if(isTouched(0.0f, 1))
+		{
+			tap_flag=true;
 		}
+		
+		if(!game_over && tap_flag)
+		{
+			// check input and apply to velocity & state
+			if((Gdx.input.isKeyPressed(Keys.SPACE) || isTouched(0.0f, 1)) /*&& koala.grounded*/) {
+				koala.velocity.y = Koala.JUMP_VELOCITY;
+				koala.state = Koala.State.Jumping;
+				koala.grounded = false;
+				screen="game";
+			}
 
-//		if(false || Gdx.input.isKeyPressed(Keys.LEFT) || Gdx.input.isKeyPressed(Keys.A) || isTouched(0, 0.25f)) {
-//			koala.velocity.x = -Koala.MAX_VELOCITY;
-//			if(koala.grounded) koala.state = Koala.State.Walking;
-//			koala.facesRight = false;
-//		}
-
-//		if(true || Gdx.input.isKeyPressed(Keys.RIGHT) || Gdx.input.isKeyPressed(Keys.D) || isTouched(0.25f, 0.5f)) {
 			koala.velocity.x = Koala.MAX_VELOCITY;
 			if(koala.grounded) koala.state = Koala.State.Walking;
 			koala.facesRight = true;
-//		}
 
-		// apply gravity if we are falling
-		koala.velocity.add(0, GRAVITY);
+			// apply gravity if we are falling
+			koala.velocity.add(0, GRAVITY);
 
-		// clamp the velocity to the maximum, x-axis only
-		if(Math.abs(koala.velocity.x) > Koala.MAX_VELOCITY) {
-			koala.velocity.x = Math.signum(koala.velocity.x) * Koala.MAX_VELOCITY;
+			// clamp the velocity to the maximum, x-axis only
+			if(Math.abs(koala.velocity.x) > Koala.MAX_VELOCITY) {
+				koala.velocity.x = Math.signum(koala.velocity.x) * Koala.MAX_VELOCITY;
+			}
+
+			// clamp the velocity to 0 if it's < 1, and set the state to standign
+			if(Math.abs(koala.velocity.x) < 1) {
+				koala.velocity.x = 0;
+				if(koala.grounded) koala.state = Koala.State.Standing;
+			}
 		}
-
-		// clamp the velocity to 0 if it's < 1, and set the state to standign
-		if(Math.abs(koala.velocity.x) < 1) {
-			koala.velocity.x = 0;
-			if(koala.grounded) koala.state = Koala.State.Standing;
-		}
-
+		
 		// multiply by delta time so we know how far we go
 		// in this frame
 		koala.velocity.scl(deltaTime);
@@ -363,14 +387,14 @@ public class TallerPlatformer extends GdxTest {
 //		}
 //		startY = (int)(koala.position.y);
 //		endY = (int)(koala.position.y + Koala.HEIGHT);
-		startX = (int)(koala.position.x + koala.velocity.x);
-		endX = (int)(koala.position.x + Koala.WIDTH + koala.velocity.x);
+		startX = (int)(koala.position.x + Koala.WIDTH/4);
+		endX = (int)(koala.position.x + Koala.WIDTH - Koala.WIDTH/4);
 		
-		startY = (int)(koala.position.y + koala.velocity.y);
-		endY = (int)(koala.position.y + Koala.HEIGHT + koala.velocity.y);
+		startY = (int)(koala.position.y + Koala.HEIGHT/4);
+		endY = (int)(koala.position.y + Koala.HEIGHT - Koala.HEIGHT/4);
 		
 		getTiles(startX, startY, endX, endY, tiles,1);
-		koalaRect.x += koala.velocity.x;
+//		koalaRect.x += koala.velocity.x;
 		for(Rectangle tile: tiles) {
 			if(koalaRect.overlaps(tile)) {
 				koala.velocity.x = 0;
@@ -378,38 +402,8 @@ public class TallerPlatformer extends GdxTest {
 				break;
 			}
 		}
-		koalaRect.x = koala.position.x;
+//		koalaRect.x = koala.position.x;
 
-//		// if the koala is moving upwards, check the tiles to the top of it's
-//		// top bounding box edge, otherwise check the ones to the bottom
-//		if(koala.velocity.y > 0) {
-//			startY = endY = (int)(koala.position.y + Koala.HEIGHT + koala.velocity.y);
-//		} else {
-//			startY = endY = (int)(koala.position.y + koala.velocity.y);
-//		}
-//		startX = (int)(koala.position.x);
-//		endX = (int)(koala.position.x + Koala.WIDTH);
-//		getTiles(startX, startY, endX, endY, tiles,1);
-//		koalaRect.y += koala.velocity.y;
-//		for(Rectangle tile: tiles) {
-//			if(koalaRect.overlaps(tile)) {
-//				// we actually reset the koala y-position here
-//				// so it is just below/above the tile we collided with
-//				// this removes bouncing :)
-//				if(koala.velocity.y > 0) {
-//					koala.position.y = tile.y - Koala.HEIGHT;
-//					// we hit a block jumping upwards, let's destroy it!
-//					TiledMapTileLayer layer = (TiledMapTileLayer)map.getLayers().get(1);
-////					layer.setCell((int)tile.x, (int)tile.y, null);
-//				} else {
-//					koala.position.y = tile.y + tile.height;
-//					// if we hit the ground, mark us as grounded so we can jump
-//					koala.grounded = true;
-//				}
-//				koala.velocity.y = 0;
-//				break;
-//			}
-//		}
 		//Inicio cambio
 		startX = (int)(koala.position.x + koala.velocity.x);
 		endX = (int)(koala.position.x + Koala.WIDTH + koala.velocity.x);
@@ -431,7 +425,8 @@ public class TallerPlatformer extends GdxTest {
 
 		// unscale the velocity by the inverse delta time and set 
 		// the latest position
-		koala.position.add(koala.velocity);
+		if(!game_over && tap_flag)
+			koala.position.add(koala.velocity);
 		koala.velocity.scl(1/deltaTime);
 
 		// Apply damping to the velocity on the x-axis so we don't
@@ -440,7 +435,7 @@ public class TallerPlatformer extends GdxTest {
 		
 		
 		//No salirse
-		if(koala.position.y<=2)
+		if(koala.position.y<=1)
 			gameOver();
 		if(koala.position.y>14)
 			koala.position.y=14;
@@ -478,11 +473,6 @@ public class TallerPlatformer extends GdxTest {
 		// based on the koala state, get the animation frame
 		TextureRegion frame = null;
 		frame = fly.getKeyFrame(koala.stateTime);
-//		switch(koala.state) {
-//			case Standing: frame = stand.getKeyFrame(koala.stateTime); break;
-//			case Walking: frame = walk.getKeyFrame(koala.stateTime); break;
-//			case Jumping: frame = jump.getKeyFrame(koala.stateTime); break; 
-//		}
 
 		// draw the koala, depending on the current velocity
 		// on the x-axis, draw the koala facing either right
@@ -490,7 +480,7 @@ public class TallerPlatformer extends GdxTest {
 		Batch batch = renderer.getSpriteBatch();
 		batch.begin();
 		if(koala.facesRight) {
-			batch.draw(frame, koala.position.x, koala.position.y,0,0, Koala.WIDTH, Koala.HEIGHT,1,1,koala.velocity.y);
+			batch.draw(frame, koala.position.x, koala.position.y,Koala.WIDTH/2, Koala.HEIGHT/2, Koala.WIDTH, Koala.HEIGHT,1,1,koala.velocity.y);
 		} else {
 			batch.draw(frame, koala.position.x + Koala.WIDTH, koala.position.y, -Koala.WIDTH, Koala.HEIGHT);
 		}
@@ -503,7 +493,7 @@ public class TallerPlatformer extends GdxTest {
 	
 	public void resize(int width, int height) {
 	    // TODO Auto-generated method stub
-	    stage.setViewport(320, 480, true);
+	    stage_game.setViewport(320, 480, true);
 	    stage_menu.setViewport(320, 480, true);
 	}
 	
@@ -525,11 +515,15 @@ public class TallerPlatformer extends GdxTest {
 	
 	void updateScores()
 	{
+		int total_score=0;
 		int i=1;
 		for(Label l: score_labels)
 		{
-			  l.setText(""+getScore(i)+"pts");
-			  i++;
+			int score_temp=getScore(i);
+			l.setText(""+score_temp+"pts");
+			i++;
+			total_score+=score_temp;
 		}
+		total_score_label.setText("Puntaje total: "+total_score);
 	}
 }
