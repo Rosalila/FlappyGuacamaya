@@ -18,6 +18,7 @@ public class MenuButtonListener extends InputListener
 	{
 		if(TallerPlatformer.screen=="menu")
 		{
+			TallerPlatformer.select_sound.play();
 			button_img.setColor(1f, 1f, 1f, 0.5f);
 		}
 		return true;

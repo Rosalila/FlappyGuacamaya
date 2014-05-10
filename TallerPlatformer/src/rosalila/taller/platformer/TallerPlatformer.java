@@ -89,8 +89,10 @@ public class TallerPlatformer extends GdxTest {
 	boolean touch_up_flag=false;
 	boolean game_over=false;
 	boolean tap_flag=false;
-	Sound coin_sound;
-	Sound jump_sound;
+	static Sound coin_sound;
+	static Sound jump_sound;
+	static Sound hit_sound;
+	static Sound select_sound;
 	boolean key_up=true;
 	
 	static String screen="intro";
@@ -143,7 +145,7 @@ public class TallerPlatformer extends GdxTest {
 		intro.setSize(w, h);
 		
 		//Text
-		font = new BitmapFont(Gdx.files.internal("data/default.fnt"),false);
+		font = new BitmapFont(Gdx.files.internal("font/Fugaz.fnt"),false);
 		uiSkin = new Skin();
 		uiSkin.add("default", new BitmapFont());
 		//Label style
@@ -161,7 +163,9 @@ public class TallerPlatformer extends GdxTest {
 		continue_game_over.setVisible(false);
 		continue_game_over.addListener(new InputListener(){
 			@Override
-			public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+			public boolean touchDown (InputEvent event, float x, float y, int pointer, int button)
+			{
+				select_sound.play();
 				if(getScore(current_level)<score)
 					setScore(current_level, score);
 				updateScores();
@@ -204,7 +208,7 @@ public class TallerPlatformer extends GdxTest {
 				
 				Label label=new Label("",uiSkin);
 				label.setPosition(x*spacing_x+offset_x, row_position_temp-10+offset_y);
-				label.setFontScale(0.7f);
+				//label.setFontScale(0.7f);
 				stage_menu.addActor(label);
 				score_labels.add(label);
 				
@@ -229,6 +233,8 @@ public class TallerPlatformer extends GdxTest {
 		
 		coin_sound = Gdx.audio.newSound(Gdx.files.internal("sfx/coin.wav"));
 		jump_sound = Gdx.audio.newSound(Gdx.files.internal("sfx/jump.wav"));
+		hit_sound = Gdx.audio.newSound(Gdx.files.internal("sfx/hit.wav"));
+		select_sound = Gdx.audio.newSound(Gdx.files.internal("sfx/select.wav"));
 	}
 	
 	Image getLevelButton(int level)
@@ -329,6 +335,8 @@ public class TallerPlatformer extends GdxTest {
 	
 	void gameOver()
 	{
+		if(!game_over)
+			hit_sound.play();
 		tap_flag=false;
 		Gdx.input.setInputProcessor(stage_game);
 		game_over=true;
@@ -359,7 +367,7 @@ public class TallerPlatformer extends GdxTest {
 		koala.stateTime += deltaTime;	
 
 		// check input and apply to velocity & state
-		if((Gdx.input.isKeyPressed(Keys.SPACE) || isTouched(0.0f, 1)) /*&& koala.grounded*/)
+		if(((Gdx.input.isKeyPressed(Keys.SPACE) || isTouched(0.0f, 1)) && !game_over) /*&& koala.grounded*/)
 		{
 			if(key_up)
 				jump_sound.play();
@@ -453,6 +461,7 @@ public class TallerPlatformer extends GdxTest {
 		getTiles(startX, startY, endX, endY, tiles,2);
 		for(Rectangle tile: tiles) {
 			if(koalaRect.overlaps(tile)) {
+				coin_sound.play();
 				TiledMapTileLayer layer = (TiledMapTileLayer)map.getLayers().get(2);
 				layer.setCell((int)tile.x, (int)tile.y, null);
 				score++;
