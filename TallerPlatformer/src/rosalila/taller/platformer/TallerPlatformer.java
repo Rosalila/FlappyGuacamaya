@@ -6,6 +6,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL10;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -82,6 +83,9 @@ public class TallerPlatformer extends GdxTest {
 	SpriteBatch batch;
 	Sprite game_bg;
 	Stage stage_menu;
+	Sound coin_sound;
+	Sound jump_sound;
+	boolean key_up=true;
 	
 	static String screen="intro";
 	
@@ -196,6 +200,9 @@ public class TallerPlatformer extends GdxTest {
 		Music oggMusic = Gdx.audio.newMusic(Gdx.files.internal("music.ogg"));
 		oggMusic.play();
 		updateScores();
+		
+		coin_sound = Gdx.audio.newSound(Gdx.files.internal("sfx/coin.wav"));
+		jump_sound = Gdx.audio.newSound(Gdx.files.internal("sfx/jump.wav"));
 	}
 	
 	Image getLevelButton(int level)
@@ -313,11 +320,18 @@ public class TallerPlatformer extends GdxTest {
 		koala.stateTime += deltaTime;	
 
 		// check input and apply to velocity & state
-		if((Gdx.input.isKeyPressed(Keys.SPACE) || isTouched(0.0f, 1)) /*&& koala.grounded*/) {
+		if((Gdx.input.isKeyPressed(Keys.SPACE) || isTouched(0.0f, 1)) /*&& koala.grounded*/)
+		{
+			if(key_up)
+				jump_sound.play();
 			koala.velocity.y = Koala.JUMP_VELOCITY;
 			koala.state = Koala.State.Jumping;
 			koala.grounded = false;
 			screen="game";
+			key_up=false;
+		}else
+		{
+			key_up=true;
 		}
 
 //		if(false || Gdx.input.isKeyPressed(Keys.LEFT) || Gdx.input.isKeyPressed(Keys.A) || isTouched(0, 0.25f)) {
