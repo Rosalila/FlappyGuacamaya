@@ -82,6 +82,7 @@ public class TallerPlatformer extends GdxTest {
 	static int current_level=1;
 	SpriteBatch batch;
 	Sprite game_bg;
+	Sprite menu_bg;
 	Stage stage_menu;
 	Image continue_game_over;
 	boolean touch_up_flag=false;
@@ -146,12 +147,13 @@ public class TallerPlatformer extends GdxTest {
 		label_syle.font = font;
 		label_syle.fontColor = Color.BLACK;
 		uiSkin.add("default", label_syle);
-		score_label = new Label("Score: "+score,uiSkin);
+		score_label = new Label("Puntos: "+score,uiSkin);
 		
 		stage_game = new Stage();
 		stage_game.addActor(score_label);
 		
 		continue_game_over = new Image(new Texture("continue.png"));
+		continue_game_over.setY(continue_game_over.getY()+20);
 		continue_game_over.setVisible(false);
 		continue_game_over.addListener(new InputListener(){
 			@Override
@@ -166,6 +168,7 @@ public class TallerPlatformer extends GdxTest {
 				return true;
 			}
 		});
+		continue_game_over.setPosition(320/2-continue_game_over.getWidth()/2, 480/2-continue_game_over.getHeight()/2);
 		stage_game.addActor(continue_game_over);
 		
 		Texture game_bg_texture=new Texture("game_bg.png");
@@ -173,14 +176,19 @@ public class TallerPlatformer extends GdxTest {
 		game_bg = new Sprite(new TextureRegion(game_bg_texture,320,480));
 		game_bg.setSize(w, h);
 		
+		Texture menu_bg_texture=new Texture("menu_bg.png");
+		menu_bg_texture.setFilter(TextureFilter.Linear, TextureFilter.Linear);
+		menu_bg = new Sprite(new TextureRegion(menu_bg_texture,320,480));
+		menu_bg.setSize(w, h);
+		
 		stage_menu = new Stage();
 		Gdx.input.setInputProcessor(stage_menu);
 		
 		int level_temp=1;
 		int offset_x=20;
-		int offset_y=20;
+		int offset_y=10;
 		int spacing_x=110;
-		int spacing_y=110;
+		int spacing_y=90;
 		int row_position_temp=spacing_y*3+50;
 		for(int y=0;y<4;y++)
 		{
@@ -218,7 +226,7 @@ public class TallerPlatformer extends GdxTest {
 	
 	Image getLevelButton(int level)
 	{
-		Image button = new Image(new Texture("menu/button.png"));
+		Image button = new Image(new Texture("menu/button"+level+".png"));
 		button.addListener(new MenuButtonListener(level,button));
 		return button;
 	}
@@ -259,13 +267,15 @@ public class TallerPlatformer extends GdxTest {
 		// get the delta time
 		float deltaTime = Gdx.graphics.getDeltaTime();
 		
-		//Render the bg
-		batch.begin();
-		game_bg.draw(batch);
-		batch.end();
+
 		
 		if(screen=="game")
 		{
+			//Render the bg
+			batch.begin();
+			game_bg.draw(batch);
+			batch.end();
+			
 			renderGame(deltaTime);
 			stage_game.draw();
 		}
@@ -278,6 +288,11 @@ public class TallerPlatformer extends GdxTest {
 		
 		if(screen=="menu")
 		{
+			//Render the bg
+			batch.begin();
+			menu_bg.draw(batch);
+			batch.end();
+			
 			stage_menu.draw();
 		}
 	}
@@ -290,12 +305,12 @@ public class TallerPlatformer extends GdxTest {
 	}
 	
 	void logicIntro()
-	{
+	{		
 		if((Gdx.input.isKeyPressed(Keys.SPACE) || isTouched(0.0f, 1))&& touch_up_flag)
 		{			
 			screen="menu";
 			score=0;
-			score_label.setText("Score: "+score);
+			score_label.setText("Puntos: "+score);
 			touch_up_flag=false;
 		}
 		
@@ -417,7 +432,7 @@ public class TallerPlatformer extends GdxTest {
 				TiledMapTileLayer layer = (TiledMapTileLayer)map.getLayers().get(2);
 				layer.setCell((int)tile.x, (int)tile.y, null);
 				score++;
-				score_label.setText("Score: "+score);
+				score_label.setText("Puntos: "+score);
 			}
 		}
 		//fin cambio
