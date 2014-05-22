@@ -1,12 +1,18 @@
 package rosalila.taller.platformer;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Scanner;
+
+import swarm.AndroidFunctionsInterface;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL10;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -26,12 +32,12 @@ import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.tests.utils.GdxTest;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
@@ -76,7 +82,7 @@ public class TallerPlatformer extends GdxTest {
 	static private Koala koala;
 	BitmapFont font;
 	Label total_score_label;
-	Label score_label;
+	static Label score_label;
 	Stage stage_game;
 	Sprite intro;
 	static int score=0;
@@ -86,7 +92,7 @@ public class TallerPlatformer extends GdxTest {
 	Sprite menu_bg;
 	Stage stage_menu;
 	Image continue_game_over;
-	boolean touch_up_flag=false;
+	boolean touch_up_flag=true;
 	boolean game_over=false;
 	boolean tap_flag=false;
 	static Sound coin_sound;
@@ -94,8 +100,13 @@ public class TallerPlatformer extends GdxTest {
 	static Sound hit_sound;
 	static Sound select_sound;
 	boolean key_up=true;
+	LabelStyle label_syle;
+	float color_animation=0;
+	boolean color_animation_activated=false;
 	
 	static String screen="intro";
+	
+	private final AndroidFunctionsInterface androidFunctions;
 	
 	ArrayList<Label>score_labels;
 	
@@ -108,11 +119,30 @@ public class TallerPlatformer extends GdxTest {
 	};
 	private Array<Rectangle> tiles = new Array<Rectangle>();
 
-	private static final float GRAVITY = -2.5f;
+	private static final float GRAVITY = -2f;
 
+	
+	public TallerPlatformer(AndroidFunctionsInterface desktopFunctions)
+	{
+		this.androidFunctions = desktopFunctions;
+	}
+	
 	@Override
 	public void create ()
 	{
+		try
+		{
+			FileHandle file = Gdx.files.local("crypt_keys/test.cript");
+			String str = file.readString();
+			System.out.println(str);
+		}catch(Exception e)
+		{
+			System.out.print("Flappy error: crypt_keys/test.cript not found");
+		}
+		
+		
+		
+		
 		float w = Gdx.graphics.getWidth();
 		float h = Gdx.graphics.getHeight();
 		score = 0;
@@ -149,11 +179,12 @@ public class TallerPlatformer extends GdxTest {
 		uiSkin = new Skin();
 		uiSkin.add("default", new BitmapFont());
 		//Label style
-		LabelStyle label_syle = new LabelStyle();
+		label_syle = new LabelStyle();
 		label_syle.font = font;
-		label_syle.fontColor = Color.BLACK;
+		label_syle.fontColor = Color.WHITE;
 		uiSkin.add("default", label_syle);
 		score_label = new Label("Puntos: "+score,uiSkin);
+		score_label.setColor(Color.BLACK);
 		
 		stage_game = new Stage();
 		stage_game.addActor(score_label);
@@ -161,19 +192,23 @@ public class TallerPlatformer extends GdxTest {
 		continue_game_over = new Image(new Texture("continue.png"));
 		continue_game_over.setY(continue_game_over.getY()+20);
 		continue_game_over.setVisible(false);
-		continue_game_over.addListener(new InputListener(){
+		continue_game_over.addListener(new ClickListener(){
 			@Override
-			public boolean touchDown (InputEvent event, float x, float y, int pointer, int button)
+			public void touchUp (InputEvent event, float x, float y, int pointer, int button)
 			{
+				super.touchUp(event, y, y, button, button);
 				select_sound.play();
+				color_animation_activated=false;
 				if(getScore(current_level)<score)
+				{
+					color_animation_activated=true;
 					setScore(current_level, score);
+				}
 				updateScores();
 				continue_game_over.setVisible(false);
 				game_over=false;
-				screen="intro";
+				screen="menu";
 				Gdx.input.setInputProcessor(stage_menu);
-				return true;
 			}
 		});
 		continue_game_over.setPosition(320/2-continue_game_over.getWidth()/2, 480/2-continue_game_over.getHeight()/2);
@@ -207,6 +242,7 @@ public class TallerPlatformer extends GdxTest {
 				stage_menu.addActor(button);
 				
 				Label label=new Label("",uiSkin);
+				label.setColor(Color.BLACK);
 				label.setPosition(x*spacing_x+offset_x, row_position_temp-10+offset_y);
 				//label.setFontScale(0.7f);
 				stage_menu.addActor(label);
@@ -220,6 +256,19 @@ public class TallerPlatformer extends GdxTest {
 		total_score_label.setY(total_score_label.getY()+15);
 		stage_menu.addActor(total_score_label);
 		
+		Image swarm_button = new Image(new Texture (Gdx.files.internal("swarm.png")));
+		swarm_button.addListener(new ClickListener(){
+			@Override
+			public void touchUp (InputEvent event, float x, float y, int pointer, int button)
+			{
+				super.touchUp(event, 0, 0, pointer, button);
+				System.out.print("testa");
+				androidFunctions.ShowLeaderboardSwarm();
+			}
+		});
+		swarm_button.setPosition(w-swarm_button.getWidth(), 0);
+		stage_menu.addActor(swarm_button);
+		
 		batch = new SpriteBatch();
 		
 		// create the Koala we want to move around the world
@@ -229,12 +278,14 @@ public class TallerPlatformer extends GdxTest {
 		
 		Music oggMusic = Gdx.audio.newMusic(Gdx.files.internal("music.ogg"));
 		oggMusic.play();
+		oggMusic.setLooping(true);
 		updateScores();
 		
 		coin_sound = Gdx.audio.newSound(Gdx.files.internal("sfx/coin.wav"));
 		jump_sound = Gdx.audio.newSound(Gdx.files.internal("sfx/jump.wav"));
 		hit_sound = Gdx.audio.newSound(Gdx.files.internal("sfx/hit.wav"));
 		select_sound = Gdx.audio.newSound(Gdx.files.internal("sfx/select.wav"));
+		androidFunctions.SwarmInitiate();
 	}
 	
 	Image getLevelButton(int level)
@@ -246,6 +297,9 @@ public class TallerPlatformer extends GdxTest {
 	
 	static void initLevel(int level)
 	{
+		score=0;
+		score_label.setText("Puntos: "+score);
+		
 		koala.position.set(0, 7);
 		koala.velocity.y=0;
 		if(map!=null)
@@ -307,6 +361,18 @@ public class TallerPlatformer extends GdxTest {
 			batch.end();
 			
 			stage_menu.draw();
+			
+			///!!!!
+			if(color_animation_activated)
+			{
+				total_score_label.setColor(color_animation,0,0,1);
+				color_animation+=0.03;
+				if(color_animation>1)
+					color_animation=0;
+			}else
+			{
+				total_score_label.setColor(Color.BLACK);
+			}
 		}
 	}
 	
@@ -320,15 +386,14 @@ public class TallerPlatformer extends GdxTest {
 	void logicIntro()
 	{		
 		if((Gdx.input.isKeyPressed(Keys.SPACE) || isTouched(0.0f, 1))&& touch_up_flag)
-		{			
-			screen="menu";
-			score=0;
-			score_label.setText("Puntos: "+score);
+		{
 			touch_up_flag=false;
 		}
 		
 		if( !isTouched(0.0f, 1))
 		{
+			if(!touch_up_flag)
+				screen="menu";
 			touch_up_flag=true;
 		}
 	}
@@ -336,9 +401,12 @@ public class TallerPlatformer extends GdxTest {
 	void gameOver()
 	{
 		if(!game_over)
+		{
 			hit_sound.play();
+			Gdx.input.setInputProcessor(stage_game);
+		}
+			
 		tap_flag=false;
-		Gdx.input.setInputProcessor(stage_game);
 		game_over=true;
 		continue_game_over.setVisible(true);
 	}
@@ -485,8 +553,8 @@ public class TallerPlatformer extends GdxTest {
 		//No salirse
 		if(koala.position.y<=1)
 			gameOver();
-		if(koala.position.y>14)
-			koala.position.y=14;
+		if(koala.position.y>13)
+			koala.position.y=13;
 	}
 
 	private boolean isTouched(float startX, float endX) {
@@ -547,13 +615,13 @@ public class TallerPlatformer extends GdxTest {
 	
 	void setScore(int level, int score)
 	{
-		prefs.putInteger(""+level, score);
+		prefs.putInteger(""+level, encript(score));
 		prefs.flush();
 	}
 	
 	int getScore(int level)
 	{
-		return prefs.getInteger(""+level, 0);
+		return decript(prefs.getInteger(""+level, 0));
 	}
 	
 	void initPrefs()
@@ -573,5 +641,16 @@ public class TallerPlatformer extends GdxTest {
 			total_score+=score_temp;
 		}
 		total_score_label.setText("Puntaje total: "+total_score);
+		androidFunctions.SubmitScore(total_score);
+	}
+	
+	int encript(int num)
+	{
+		return num*2;
+	}
+	
+	int decript(int num)
+	{
+		return num/2;
 	}
 }

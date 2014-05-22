@@ -16,6 +16,7 @@ public class MenuButtonListener extends InputListener
 	@Override
 	public boolean touchDown (InputEvent event, float x, float y, int pointer, int button)
 	{
+		super.touchDown(event, x, y, pointer, button);
 		if(TallerPlatformer.screen=="menu")
 		{
 			TallerPlatformer.select_sound.play();
@@ -25,7 +26,9 @@ public class MenuButtonListener extends InputListener
 	}
 	
 	@Override
-	public void touchUp (InputEvent event, float x, float y, int pointer, int button) {
+	public void touchUp (InputEvent event, float x, float y, int pointer, int button)
+	{
+		super.touchUp(event, x, y, pointer, button);
 		if(TallerPlatformer.screen=="menu")
 		{
 			button_img.setColor(1f, 1f, 1f, 1f);

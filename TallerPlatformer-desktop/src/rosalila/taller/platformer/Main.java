@@ -1,5 +1,7 @@
 package rosalila.taller.platformer;
 
+import swarm.DesktopFunctions;
+
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;
 
@@ -13,6 +15,6 @@ public class Main {
 		cfg.width = 320;
 		cfg.height = 480;
 		
-		new LwjglApplication(new TallerPlatformer(), cfg);
+		new LwjglApplication(new TallerPlatformer(new DesktopFunctions()), cfg);
 	}
 }

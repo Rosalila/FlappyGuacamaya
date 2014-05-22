@@ -1,3 +1,5 @@
+#Flappy ignore
+*.cript
 
 # and2
 nightly/libs
