@@ -1,10 +1,14 @@
 package rosalila.taller.platformer;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.ArrayList;
-import java.util.Scanner;
 
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.DESKeySpec;
+
+import sun.misc.BASE64Decoder;
+import sun.misc.BASE64Encoder;
 import swarm.AndroidFunctionsInterface;
 
 import com.badlogic.gdx.Gdx;
@@ -91,7 +95,9 @@ public class TallerPlatformer extends GdxTest {
 	Sprite game_bg;
 	Sprite menu_bg;
 	Stage stage_menu;
+	Stage stage_intro;
 	Image continue_game_over;
+	BestScoreAnimation best_score_animation;
 	boolean touch_up_flag=true;
 	boolean game_over=false;
 	boolean tap_flag=false;
@@ -102,7 +108,13 @@ public class TallerPlatformer extends GdxTest {
 	boolean key_up=true;
 	LabelStyle label_syle;
 	float color_animation=0;
-	boolean color_animation_activated=false;
+	static boolean color_animation_activated=false;
+	Image swarm_button;
+	float w,h;
+	//Encripcion
+	sun.misc.BASE64Encoder base64encoder;
+	sun.misc.BASE64Decoder base64decoder;
+	SecretKey key;
 	
 	static String screen="intro";
 	
@@ -127,24 +139,42 @@ public class TallerPlatformer extends GdxTest {
 		this.androidFunctions = desktopFunctions;
 	}
 	
-	@Override
-	public void create ()
+	public static String getKey(String path)
 	{
 		try
 		{
-			FileHandle file = Gdx.files.local("crypt_keys/test.cript");
+			FileHandle file = Gdx.files.local(path);
 			String str = file.readString();
+//			return "A";
 			System.out.println(str);
+			return str;
 		}catch(Exception e)
 		{
-			System.out.print("Flappy error: crypt_keys/test.cript not found");
+			System.out.print("Flappy error: " + path + " not found");
+		}
+		return "error";
+	}
+	
+	@Override
+	public void create ()
+	{		
+		System.out.print(TallerPlatformer.getKey("crypt_keys/test.cript"));
+		w = Gdx.graphics.getWidth();
+		h = Gdx.graphics.getHeight();
+		
+		//Encripcion
+		base64encoder = new BASE64Encoder();
+		base64decoder = new BASE64Decoder();
+		try
+		{
+			DESKeySpec keySpec = new DESKeySpec("trwetrewtwfgfdg".getBytes("UTF8"));
+			SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("DES");
+			key = keyFactory.generateSecret(keySpec);
+		}catch(Exception e)
+		{
+			e.printStackTrace();
 		}
 		
-		
-		
-		
-		float w = Gdx.graphics.getWidth();
-		float h = Gdx.graphics.getHeight();
 		score = 0;
 		current_level = 1;
 		
@@ -198,7 +228,6 @@ public class TallerPlatformer extends GdxTest {
 			{
 				super.touchUp(event, y, y, button, button);
 				select_sound.play();
-				color_animation_activated=false;
 				if(getScore(current_level)<score)
 				{
 					color_animation_activated=true;
@@ -206,6 +235,7 @@ public class TallerPlatformer extends GdxTest {
 				}
 				updateScores();
 				continue_game_over.setVisible(false);
+				best_score_animation.setVisible(false);
 				game_over=false;
 				screen="menu";
 				Gdx.input.setInputProcessor(stage_menu);
@@ -213,6 +243,10 @@ public class TallerPlatformer extends GdxTest {
 		});
 		continue_game_over.setPosition(320/2-continue_game_over.getWidth()/2, 480/2-continue_game_over.getHeight()/2);
 		stage_game.addActor(continue_game_over);
+		
+		best_score_animation = new BestScoreAnimation();
+		best_score_animation.setVisible(false);
+		stage_game.addActor(best_score_animation);
 		
 		Texture game_bg_texture=new Texture("game_bg.png");
 		game_bg_texture.setFilter(TextureFilter.Linear, TextureFilter.Linear);
@@ -256,18 +290,39 @@ public class TallerPlatformer extends GdxTest {
 		total_score_label.setY(total_score_label.getY()+15);
 		stage_menu.addActor(total_score_label);
 		
-		Image swarm_button = new Image(new Texture (Gdx.files.internal("swarm.png")));
+		swarm_button = new Image(new Texture (Gdx.files.internal("swarm.png")));
 		swarm_button.addListener(new ClickListener(){
 			@Override
 			public void touchUp (InputEvent event, float x, float y, int pointer, int button)
 			{
 				super.touchUp(event, 0, 0, pointer, button);
-				System.out.print("testa");
-				androidFunctions.ShowLeaderboardSwarm();
+				if(TallerPlatformer.screen.equals("menu"))
+				{
+					System.out.print("Boton de swarm presionado.");
+					if(!androidFunctions.IsSwarmInitiated())
+						androidFunctions.SwarmInitiate();
+					
+					androidFunctions.ShowLeaderboardSwarm();
+//					while(!androidFunctions.IsSwarmInitiated());
+				}
+				
 			}
 		});
-		swarm_button.setPosition(w-swarm_button.getWidth(), 0);
+		
 		stage_menu.addActor(swarm_button);
+		
+		stage_intro = new Stage();
+		String pro_tips[] = {"El puntaje brilla cuando alcancanzas un nuevo score."
+				,"Puedes habilitar el boton de swarm para competir con tu puntaje en linea."
+				,"Mientras tengas presionada la pantalla la guacamaya seguira volando hacia arriba."
+				};
+		Label pro_tip_label = new Label("Protip: "+pro_tips[(int)(Math.random()*1000)%pro_tips.length], uiSkin);
+		pro_tip_label.setWidth(300);
+		pro_tip_label.setWrap(true);
+		pro_tip_label.setX(10);
+		pro_tip_label.setY(pro_tip_label.getHeight()+10);
+		pro_tip_label.setColor(Color.BLACK);
+		stage_intro.addActor(pro_tip_label);
 		
 		batch = new SpriteBatch();
 		
@@ -285,7 +340,7 @@ public class TallerPlatformer extends GdxTest {
 		jump_sound = Gdx.audio.newSound(Gdx.files.internal("sfx/jump.wav"));
 		hit_sound = Gdx.audio.newSound(Gdx.files.internal("sfx/hit.wav"));
 		select_sound = Gdx.audio.newSound(Gdx.files.internal("sfx/select.wav"));
-		androidFunctions.SwarmInitiate();
+		androidFunctions.SwarmPreload();
 	}
 	
 	Image getLevelButton(int level)
@@ -297,6 +352,8 @@ public class TallerPlatformer extends GdxTest {
 	
 	static void initLevel(int level)
 	{
+		color_animation_activated=false;
+		score_label.setColor(Color.BLACK);
 		score=0;
 		score_label.setText("Puntos: "+score);
 		
@@ -330,6 +387,11 @@ public class TallerPlatformer extends GdxTest {
 		// clear the screen
 		Gdx.gl.glClearColor(0.7f, 0.7f, 1.0f, 1);
 		Gdx.gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
+		
+		if(!androidFunctions.IsSwarmInitiated())
+			swarm_button.setColor(0.7f,0.7f,0.7f,1f);
+		else
+			swarm_button.setColor(1f,1f,1f,1f);
 
 		// get the delta time
 		float deltaTime = Gdx.graphics.getDeltaTime();
@@ -345,6 +407,19 @@ public class TallerPlatformer extends GdxTest {
 			
 			renderGame(deltaTime);
 			stage_game.draw();
+			stage_game.act();
+			
+			///!!!!
+			if(color_animation_activated)
+			{
+				score_label.setColor(color_animation,0,0,1);
+				color_animation+=0.03;
+				if(color_animation>1)
+					color_animation=0;
+			}else
+			{
+				total_score_label.setColor(Color.BLACK);
+			}
 		}
 		
 		if(screen=="intro")
@@ -361,6 +436,7 @@ public class TallerPlatformer extends GdxTest {
 			batch.end();
 			
 			stage_menu.draw();
+			stage_menu.act();
 			
 			///!!!!
 			if(color_animation_activated)
@@ -381,6 +457,7 @@ public class TallerPlatformer extends GdxTest {
 		batch.begin();
 		intro.draw(batch);
 		batch.end();
+		stage_intro.draw();
 	}
 	
 	void logicIntro()
@@ -409,6 +486,10 @@ public class TallerPlatformer extends GdxTest {
 		tap_flag=false;
 		game_over=true;
 		continue_game_over.setVisible(true);
+		if(getScore(current_level)<score)
+		{
+			best_score_animation.setVisible(true);
+		}
 	}
 	
 	void renderGame(float deltaTime)
@@ -534,6 +615,10 @@ public class TallerPlatformer extends GdxTest {
 				layer.setCell((int)tile.x, (int)tile.y, null);
 				score++;
 				score_label.setText("Puntos: "+score);
+				if(getScore(current_level)<score)
+				{
+					color_animation_activated=true;
+				}
 			}
 		}
 		//fin cambio
@@ -609,19 +694,21 @@ public class TallerPlatformer extends GdxTest {
 	
 	public void resize(int width, int height) {
 	    // TODO Auto-generated method stub
-	    stage_game.setViewport(320, 480, true);
-	    stage_menu.setViewport(320, 480, true);
+		stage_game.setViewport(320, 480, true);
+		stage_menu.setViewport(320, 480, true);
+		stage_intro.setViewport(320, 480, true);
+	    swarm_button.setPosition(320-swarm_button.getWidth(), 0);
 	}
 	
 	void setScore(int level, int score)
 	{
-		prefs.putInteger(""+level, encript(score));
+		prefs.putString(""+level, encript(score));
 		prefs.flush();
 	}
 	
 	int getScore(int level)
 	{
-		return decript(prefs.getInteger(""+level, 0));
+		return decript(prefs.getString(""+level, "-1"));
 	}
 	
 	void initPrefs()
@@ -641,16 +728,48 @@ public class TallerPlatformer extends GdxTest {
 			total_score+=score_temp;
 		}
 		total_score_label.setText("Puntaje total: "+total_score);
-		androidFunctions.SubmitScore(total_score);
+		if(androidFunctions.IsSwarmInitiated())
+			androidFunctions.SubmitScore(total_score);
 	}
 	
-	int encript(int num)
+	String encript(int num)
 	{
-		return num*2;
+		//Fuente http://stackoverflow.com/questions/5220761/fast-and-simple-string-encrypt-decrypt-in-java
+		String no_encriptada = ""+num;
+		String encriptada = "";
+		
+		try {
+			// ENCODE plainTextPassword String
+			byte[] cleartext = no_encriptada.getBytes("UTF8");
+			Cipher cipher = Cipher.getInstance("DES"); // cipher is not thread safe
+			cipher.init(Cipher.ENCRYPT_MODE, key);
+			encriptada = base64encoder.encode(cipher.doFinal(cleartext));
+		} catch (Exception e) {
+//			e.printStackTrace();
+			System.out.println("Score no encontrado.");
+		}      
+		
+		return encriptada;
 	}
 	
-	int decript(int num)
+	int decript(String encriptada)
 	{
-		return num/2;
+		// DECODE encryptedPwd String
+		int decodificada = 0;
+		try
+		{
+			byte[] encrypedPwdBytes = base64decoder.decodeBuffer(encriptada);
+	
+			Cipher cipher = Cipher.getInstance("DES");// cipher is not thread safe
+			cipher.init(Cipher.DECRYPT_MODE, key);
+			byte[] plainTextPwdBytes = (cipher.doFinal(encrypedPwdBytes));
+			String str_decodificada = new String(plainTextPwdBytes, "UTF-8");
+			decodificada = Integer.parseInt(str_decodificada);
+		}catch(Exception e)
+		{
+//			e.printStackTrace();
+			System.out.println("Score no encontrado.");
+		}
+		return decodificada;
 	}
 }

@@ -16,10 +16,15 @@ public class DesktopFunctions implements AndroidFunctionsInterface
 	
 	public boolean IsSwarmInitiated()
 	{
-		Gdx.app.log("DesktopFunctions", "Is Swarm inititated.");
+//		Gdx.app.log("DesktopFunctions", "Is Swarm inititated.");
 		return true;
 	}
 
+	public void SwarmPreload()
+	{
+		Gdx.app.log("DesktopFunctions", "Swarm preload.");
+	}
+	
 	public void SwarmInitiate()
 	{
 		Gdx.app.log("DesktopFunctions", "Swarm inititate.");

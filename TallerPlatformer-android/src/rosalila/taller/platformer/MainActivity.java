@@ -4,9 +4,14 @@ import java.util.Map;
 
 import swarm.AndroidFunctionsInterface;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.widget.Toast;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
+import com.badlogic.gdx.files.FileHandle;
 import com.swarmconnect.Swarm;
 import com.swarmconnect.SwarmAchievement;
 import com.swarmconnect.SwarmAchievement.GotAchievementsMapCB;
@@ -23,6 +28,7 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
 	int loaded_score = 0;
 	float readed_barcode;
 	boolean loaded_score_ready = false;
+	boolean swarm_preloaded = false;
 	
 	int LEADERBOARD_ID = 16298;
 	int GAME_ID = 11396;
@@ -41,6 +47,11 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
         cfg.useGL20 = false;
         
         Swarm.setActive(this);
+        
+//        if ( Swarm.isEnabled() ) {
+//        	SwarmPreload();
+//            Swarm.init(this, GAME_ID, GAME_KEY);
+//        }
         
         initialize(new TallerPlatformer(this), cfg);
     }
@@ -134,18 +145,30 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
 	public boolean IsSwarmInitiated() {
 		return Swarm.isInitialized();
 	}
+	
+	// Swarm
+	public void SwarmPreload()
+	{		
+		GAME_KEY = getKey("crypt_keys/test.cript");
+//		Swarm.preload(this, GAME_ID, GAME_KEY);
+		swarm_preloaded=true;
+//		System.out.print("Testa"+GAME_KEY);
+//		Toast.makeText(getBaseContext(), GAME_KEY, Toast.LENGTH_LONG).show();
+	}
 
 	// Swarm
 	public void SwarmInitiate() {
 		// Ensure it runs on UI thread
-		final MainActivity a_temp=this;
-		MainActivity.this.runOnUiThread(new Runnable() {
-			public void run() {
-				//Swarm.preload(a_temp, GAME_ID, GAME_KEY);
-				Swarm.setLeaderboardNotificationsEnabled(false);
+		MainActivity.this.runOnUiThread(new Runnable()
+		{
+			public void run()
+			{
+				if(!swarm_preloaded)
+					SwarmPreload();
+				Swarm.setLeaderboardNotificationsEnabled(true);
 				try {
 					if (!Swarm.isInitialized()) {
-						Swarm.init(MainActivity.this, GAME_ID, GAME_KEY,
+						Swarm.init(MainActivity.this, GAME_ID,  GAME_KEY,
 								mySwarmLoginListener);
 					}
 				} catch (Exception e) {
@@ -154,10 +177,24 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
 		});
 	}
 
+	
+	 final Handler handler = new Handler() {
+	        public void handleMessage(Message msg) {
+	              if(msg.arg1 == 1)
+	            	  	Toast.makeText(getBaseContext(), "C", Toast.LENGTH_LONG).show();
+	        }
+	    };
+	
 	// Swarm
 	public void SubmitScore(float score) {
 		// Swarm submit score – uses an interface AndroidFunctionsInterface
 		// that allows calls from the main project.
+		
+
+
+
+		 
+		 
 		try {
 			if (MainActivity.leaderboards != null) {
 				// Leaderboards come in 3 types, INTEGER, FLOAT, and TIME
@@ -166,6 +203,11 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
 				// from
 				// a score at a later time to implement things like replays.
 				MainActivity.leaderboards.submitScore(score, null, null);
+			}else
+			{
+				 Message msg = handler.obtainMessage();
+				 msg.arg1 = 1;
+				 handler.sendMessage(msg);
 			}
 		} catch (Exception e) {
 		}
@@ -214,4 +256,20 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
 			MainActivity.yourGameCloudData = data;
 		}
 	};
+	
+	public static String getKey(String path)
+	{
+		try
+		{
+			FileHandle file = Gdx.files.internal(path);
+			String str = file.readString();
+			System.out.println(str);
+			//Removing \n at the end
+			return str.substring(0, str.length()-1);
+		}catch(Exception e)
+		{
+			System.out.print("Flappy error: " + path + " not found");
+		}
+		return "error";
+	}
 }
