@@ -1,6 +1,12 @@
 package rosalila.taller.platformer;
 
+import java.security.SecureRandom;
 import java.util.Map;
+
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 import swarm.AndroidFunctionsInterface;
 import android.os.Bundle;
@@ -12,6 +18,8 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
 import com.badlogic.gdx.files.FileHandle;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.InterstitialAd;
 import com.swarmconnect.Swarm;
 import com.swarmconnect.SwarmAchievement;
 import com.swarmconnect.SwarmAchievement.GotAchievementsMapCB;
@@ -33,12 +41,18 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
 	int LEADERBOARD_ID = 16298;
 	int GAME_ID = 11396;
 	String GAME_KEY = "";
+	String SCORE_KEY[] = new String[12];
 	
 	public static SwarmLeaderboard leaderboards;
 	public static String yourGameCloudData = "0,1";
 	
 	Map<Integer, SwarmAchievement> achievements;
 	
+	//Encripcion
+	public static SecretKey key;
+	public static String toast_msg="";
+	
+	private InterstitialAd interstitial;
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -48,12 +62,29 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
         
         Swarm.setActive(this);
         
+        // Create the interstitial.
+        interstitial = new InterstitialAd(this);
+        interstitial.setAdUnitId("ca-app-pub-7008349837826288/6230463257");
+
+        // Create ad request.
+        AdRequest adRequest = new AdRequest.Builder().build();
+
+        // Begin loading your interstitial.
+        interstitial.loadAd(adRequest);        
+        
 //        if ( Swarm.isEnabled() ) {
 //        	SwarmPreload();
 //            Swarm.init(this, GAME_ID, GAME_KEY);
 //        }
         
         initialize(new TallerPlatformer(this), cfg);
+    }
+    
+    // Invoke displayInterstitial() when you are ready to display an interstitial.
+    public void displayInterstitial() {
+      if (interstitial.isLoaded()) {
+        interstitial.show();
+      }
     }
     
     
@@ -148,12 +179,25 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
 	
 	// Swarm
 	public void SwarmPreload()
-	{		
-		GAME_KEY = getKey("crypt_keys/test.cript");
+	{
+		GAME_KEY = getKey("keys/swarm.key");
+		for(int i=0;i<12;i++)
+			SCORE_KEY[i] = getKey("keys/score"+(i+1)+".key");
 //		Swarm.preload(this, GAME_ID, GAME_KEY);
 		swarm_preloaded=true;
+		
+		displayInterstitial();
 //		System.out.print("Testa"+GAME_KEY);
 //		Toast.makeText(getBaseContext(), GAME_KEY, Toast.LENGTH_LONG).show();
+//		try
+//		{
+//			DESKeySpec keySpec = new DESKeySpec(getKey("keys/scores.key").getBytes("UTF-8"));
+//			SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("DES");
+//			MainActivity.key = keyFactory.generateSecret(keySpec);
+//		}catch(Exception e)
+//		{
+//			e.printStackTrace();
+//		}
 	}
 
 	// Swarm
@@ -166,12 +210,14 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
 				if(!swarm_preloaded)
 					SwarmPreload();
 				Swarm.setLeaderboardNotificationsEnabled(true);
-				try {
+				try
+				{
 					if (!Swarm.isInitialized()) {
 						Swarm.init(MainActivity.this, GAME_ID,  GAME_KEY,
 								mySwarmLoginListener);
 					}
-				} catch (Exception e) {
+				}catch (Exception e)
+				{
 				}
 			}
 		});
@@ -181,20 +227,14 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
 	 final Handler handler = new Handler() {
 	        public void handleMessage(Message msg) {
 	              if(msg.arg1 == 1)
-	            	  	Toast.makeText(getBaseContext(), "C", Toast.LENGTH_LONG).show();
+	            	  	Toast.makeText(getBaseContext(), toast_msg, Toast.LENGTH_LONG).show();
 	        }
 	    };
 	
 	// Swarm
 	public void SubmitScore(float score) {
 		// Swarm submit score – uses an interface AndroidFunctionsInterface
-		// that allows calls from the main project.
-		
-
-
-
-		 
-		 
+		// that allows calls from the main project.		 
 		try {
 			if (MainActivity.leaderboards != null) {
 				// Leaderboards come in 3 types, INTEGER, FLOAT, and TIME
@@ -257,6 +297,31 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
 		}
 	};
 	
+	//Encription
+	public String encript(int num,int level)
+	{
+		try
+		{
+			return encrypt(SCORE_KEY[level], ""+num);
+		}catch(Exception e)
+		{
+			
+		}
+		return "0";
+	}
+	
+	public int decript(String encriptada,int level)
+	{
+		try
+		{
+			return Integer.parseInt(decrypt(SCORE_KEY[level], encriptada));
+		}catch(Exception e)
+		{
+			
+		}
+		return 0;
+	}
+	
 	public static String getKey(String path)
 	{
 		try
@@ -272,4 +337,96 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
 		}
 		return "error";
 	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	////////////////////////////////////////////////////
+    public static String encrypt(String seed, String cleartext) throws Exception {
+        byte[] rawKey = getRawKey(seed.getBytes());
+        byte[] result = encrypt(rawKey, cleartext.getBytes());
+        return toHex(result);
+}
+
+public static String decrypt(String seed, String encrypted) throws Exception {
+        byte[] rawKey = getRawKey(seed.getBytes());
+        byte[] enc = toByte(encrypted);
+        byte[] result = decrypt(rawKey, enc);
+        return new String(result);
+}
+
+private static byte[] getRawKey(byte[] seed) throws Exception {
+        KeyGenerator kgen = KeyGenerator.getInstance("AES");
+        SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
+        sr.setSeed(seed);
+    kgen.init(128, sr); // 192 and 256 bits may not be available
+    SecretKey skey = kgen.generateKey();
+    byte[] raw = skey.getEncoded();
+    return raw;
+}
+
+
+private static byte[] encrypt(byte[] raw, byte[] clear) throws Exception {
+    SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
+        Cipher cipher = Cipher.getInstance("AES");
+    cipher.init(Cipher.ENCRYPT_MODE, skeySpec);
+    byte[] encrypted = cipher.doFinal(clear);
+        return encrypted;
+}
+
+private static byte[] decrypt(byte[] raw, byte[] encrypted) throws Exception {
+    SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
+        Cipher cipher = Cipher.getInstance("AES");
+    cipher.init(Cipher.DECRYPT_MODE, skeySpec);
+    byte[] decrypted = cipher.doFinal(encrypted);
+        return decrypted;
+}
+
+public static String toHex(String txt) {
+        return toHex(txt.getBytes());
+}
+public static String fromHex(String hex) {
+        return new String(toByte(hex));
+}
+
+public static byte[] toByte(String hexString) {
+        int len = hexString.length()/2;
+        byte[] result = new byte[len];
+        for (int i = 0; i < len; i++)
+                result[i] = Integer.valueOf(hexString.substring(2*i, 2*i+2), 16).byteValue();
+        return result;
+}
+
+public static String toHex(byte[] buf) {
+        if (buf == null)
+                return "";
+        StringBuffer result = new StringBuffer(2*buf.length);
+        for (int i = 0; i < buf.length; i++) {
+                appendHex(result, buf[i]);
+        }
+        return result.toString();
+}
+private final static String HEX = "0123456789ABCDEF";
+private static void appendHex(StringBuffer sb, byte b) {
+        sb.append(HEX.charAt((b>>4)&0x0f)).append(HEX.charAt(b&0x0f));
+}
+
+
+
 }

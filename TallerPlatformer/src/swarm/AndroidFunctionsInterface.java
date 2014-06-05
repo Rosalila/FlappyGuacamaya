@@ -6,4 +6,7 @@ public interface AndroidFunctionsInterface {
 	public void SwarmPreload();
 	public void SubmitScore(float credits);
 	public void ShowLeaderboardSwarm();
+	//Encription
+	public String encript(int num,int level);
+	public int decript(String encriptada,int level);
 }
