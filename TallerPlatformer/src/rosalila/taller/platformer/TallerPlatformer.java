@@ -460,6 +460,7 @@ public class TallerPlatformer extends GdxTest {
 		{
 			hit_sound.play();
 			Gdx.input.setInputProcessor(stage_game);
+			androidFunctions.showInterstitial();
 		}
 			
 		tap_flag=false;

@@ -155,4 +155,9 @@ public class DesktopFunctions implements AndroidFunctionsInterface
 		}
 		return "error";
 	}
+	
+	public void showInterstitial()
+	{
+		System.out.print("Mostrando instertitial.");
+	}
 }

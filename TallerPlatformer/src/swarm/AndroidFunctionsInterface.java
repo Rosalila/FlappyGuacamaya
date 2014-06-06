@@ -9,4 +9,5 @@ public interface AndroidFunctionsInterface {
 	//Encription
 	public String encript(int num,int level);
 	public int decript(String encriptada,int level);
+	public void showInterstitial();
 }

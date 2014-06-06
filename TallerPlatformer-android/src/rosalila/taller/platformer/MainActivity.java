@@ -12,6 +12,7 @@ import swarm.AndroidFunctionsInterface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.badlogic.gdx.Gdx;
@@ -31,7 +32,8 @@ import com.swarmconnect.SwarmLeaderboard.GotScoreCB;
 import com.swarmconnect.SwarmLeaderboardScore;
 import com.swarmconnect.delegates.SwarmLoginListener;
 
-public class MainActivity extends AndroidApplication implements AndroidFunctionsInterface{
+public class MainActivity extends AndroidApplication implements AndroidFunctionsInterface
+{
 	
 	int loaded_score = 0;
 	float readed_barcode;
@@ -70,7 +72,9 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
         AdRequest adRequest = new AdRequest.Builder().build();
 
         // Begin loading your interstitial.
-        interstitial.loadAd(adRequest);        
+        interstitial.loadAd(adRequest);   
+        
+
         
 //        if ( Swarm.isEnabled() ) {
 //        	SwarmPreload();
@@ -186,7 +190,7 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
 //		Swarm.preload(this, GAME_ID, GAME_KEY);
 		swarm_preloaded=true;
 		
-		displayInterstitial();
+//		displayInterstitial();
 //		System.out.print("Testa"+GAME_KEY);
 //		Toast.makeText(getBaseContext(), GAME_KEY, Toast.LENGTH_LONG).show();
 //		try
@@ -302,7 +306,7 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
 	{
 		try
 		{
-			return encrypt(SCORE_KEY[level], ""+num);
+			return encrypt(SCORE_KEY[level-1], ""+num);
 		}catch(Exception e)
 		{
 			
@@ -314,7 +318,7 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
 	{
 		try
 		{
-			return Integer.parseInt(decrypt(SCORE_KEY[level], encriptada));
+			return Integer.parseInt(decrypt(SCORE_KEY[level-1], encriptada));
 		}catch(Exception e)
 		{
 			
@@ -338,9 +342,18 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
 		return "error";
 	}
 	
-	
-	
-	
+	public void showInterstitial()
+	{
+		runOnUiThread(new Runnable() {
+			  @Override
+			  public void run() {
+
+				  displayInterstitial();
+				  Log.e("A","B");
+
+			  }
+			});
+	}
 	
 	
 	
