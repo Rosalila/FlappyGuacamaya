@@ -1,4 +1,4 @@
-package rosalila.taller.platformer;
+package rosalila.flappy.guacamaya;
 
 import java.security.SecureRandom;
 import java.util.Map;
@@ -8,6 +8,7 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
+import rosalila.taller.platformer.TallerPlatformer;
 import swarm.AndroidFunctionsInterface;
 import android.os.Bundle;
 import android.os.Handler;
@@ -88,6 +89,19 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
     public void displayInterstitial() {
       if (interstitial.isLoaded()) {
         interstitial.show();
+        
+        // Create the interstitial.
+        interstitial = new InterstitialAd(this);
+        interstitial.setAdUnitId("ca-app-pub-7008349837826288/6230463257");
+
+        // Create ad request.
+        AdRequest adRequest = new AdRequest.Builder().build();
+
+        // Begin loading your interstitial.
+        interstitial.loadAd(adRequest);  
+      }else
+      {
+    	  Log.e("My AdMob", "Ad not loaded");
       }
     }
     
@@ -249,9 +263,9 @@ public class MainActivity extends AndroidApplication implements AndroidFunctions
 				MainActivity.leaderboards.submitScore(score, null, null);
 			}else
 			{
-				 Message msg = handler.obtainMessage();
-				 msg.arg1 = 1;
-				 handler.sendMessage(msg);
+//				 Message msg = handler.obtainMessage();
+//				 msg.arg1 = 1;
+//				 handler.sendMessage(msg);
 			}
 		} catch (Exception e) {
 		}

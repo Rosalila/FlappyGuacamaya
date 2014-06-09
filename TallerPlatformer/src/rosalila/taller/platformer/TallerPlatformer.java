@@ -110,6 +110,8 @@ public class TallerPlatformer extends GdxTest {
 	Image swarm_button;
 	static float w,h;
 	static Image game_intro;
+	int show_ad_counter=1;
+	int next_show_ad=(int)((Math.random()*1000)%4)+3;
 
 	MuteButton mute_button;
 	public static Music game_music;
@@ -275,7 +277,7 @@ public class TallerPlatformer extends GdxTest {
 					System.out.print("Boton de swarm presionado.");
 					if(!androidFunctions.IsSwarmInitiated())
 						androidFunctions.SwarmInitiate();
-					
+					updateScores();
 					androidFunctions.ShowLeaderboardSwarm();
 //					while(!androidFunctions.IsSwarmInitiated());
 				}
@@ -288,6 +290,7 @@ public class TallerPlatformer extends GdxTest {
 		stage_intro = new Stage();
 		String pro_tips[] = {"El puntaje brilla cuando alcancanzas un nuevo score."
 				,"Puedes habilitar Swarm para competir con tu puntaje en l]nea."
+				,"Puedes silenciar la m%sica desde el men%."
 				,"Mientras tengas presionada la pantalla, la guacamaya seguir$ volando hacia arriba."
 				};
 		//$=á /=é ]=í @=ó %=ú
@@ -460,7 +463,15 @@ public class TallerPlatformer extends GdxTest {
 		{
 			hit_sound.play();
 			Gdx.input.setInputProcessor(stage_game);
-			androidFunctions.showInterstitial();
+			
+			
+			if(show_ad_counter==next_show_ad)
+			{
+				androidFunctions.showInterstitial();
+				show_ad_counter=0;
+				next_show_ad=(int)((Math.random()*1000)%4)+3;
+			}
+			show_ad_counter++;
 		}
 			
 		tap_flag=false;
@@ -554,9 +565,14 @@ public class TallerPlatformer extends GdxTest {
 		// perform collision detection & response, on each axis, separately
 		// if the koala is moving right, check the tiles to the right of it's
 		// right bounding box edge, otherwise check the ones to the left
-		Rectangle koalaRect = rectPool.obtain();
-		koalaRect.set(koala.position.x, koala.position.y, Koala.WIDTH, Koala.HEIGHT);
+		Rectangle koalaRectWalls = rectPool.obtain();
+		koalaRectWalls.set(koala.position.x+0.5f, koala.position.y+0.30f, 1f, 1);
+		
+		Rectangle koalaRectCoins = rectPool.obtain();
+		koalaRectCoins.set(koala.position.x, koala.position.y, Koala.WIDTH, Koala.HEIGHT);
+		
 		int startX, startY, endX, endY;
+
 //		if(koala.velocity.x > 0) {
 //			startX = endX = (int)(koala.position.x + Koala.WIDTH + koala.velocity.x);
 //		} else {
@@ -571,9 +587,9 @@ public class TallerPlatformer extends GdxTest {
 		endY = (int)(koala.position.y + Koala.HEIGHT - Koala.HEIGHT/4);
 		
 		getTiles(startX, startY, endX, endY, tiles,1);
-//		koalaRect.x += koala.velocity.x;
+		
 		for(Rectangle tile: tiles) {
-			if(koalaRect.overlaps(tile)) {
+			if(koalaRectWalls.overlaps(tile)) {
 				koala.velocity.x = 0;
 				gameOver();
 				break;
@@ -590,7 +606,7 @@ public class TallerPlatformer extends GdxTest {
 		
 		getTiles(startX, startY, endX, endY, tiles,2);
 		for(Rectangle tile: tiles) {
-			if(koalaRect.overlaps(tile)) {
+			if(koalaRectCoins.overlaps(tile)) {
 				coin_sound.play();
 				TiledMapTileLayer layer = (TiledMapTileLayer)map.getLayers().get(2);
 				layer.setCell((int)tile.x, (int)tile.y, null);
@@ -603,7 +619,8 @@ public class TallerPlatformer extends GdxTest {
 			}
 		}
 		//fin cambio
-		rectPool.free(koalaRect);
+		rectPool.free(koalaRectWalls);
+		rectPool.free(koalaRectCoins);
 
 		// unscale the velocity by the inverse delta time and set 
 		// the latest position
