@@ -759,9 +759,9 @@ public class TallerPlatformer extends GdxTest {
 		if(level==10)
 			return 243;
 		if(level==11)
-			return 234;
-		if(level==12)
 			return 116;
+		if(level==12)
+			return 234;
 		return -1;
 	}
 	
