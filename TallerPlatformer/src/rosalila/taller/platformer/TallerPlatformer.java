@@ -118,11 +118,14 @@ public class TallerPlatformer extends GdxTest {
 	
 	static String screen="intro";
 	
-	private final AndroidFunctionsInterface androidFunctions;
+	ArrayList<Image> level_buttons = new ArrayList<Image>();
+	ArrayList<Image> locked_images = new ArrayList<Image>();
+	
+	private static AndroidFunctionsInterface androidFunctions;
 	
 	ArrayList<Label>score_labels;
 	
-	Preferences prefs;
+	static Preferences prefs;
 	private Pool<Rectangle> rectPool = new Pool<Rectangle>() {
 		@Override
 		protected Rectangle newObject () {
@@ -243,11 +246,13 @@ public class TallerPlatformer extends GdxTest {
 		int spacing_x=110;
 		int spacing_y=90;
 		int row_position_temp=spacing_y*3+50;
+		Texture locked_texture = new Texture("menu/locked.png");
 		for(int y=0;y<4;y++)
 		{
 			for(int x=0;x<3;x++)
 			{
-				Image button=getLevelButton(level_temp);
+				Image button=createLevelButton(level_temp);
+				level_buttons.add(button);
 				button.setPosition(x*spacing_x+offset_x, row_position_temp+offset_y);
 				stage_menu.addActor(button);
 				
@@ -259,6 +264,12 @@ public class TallerPlatformer extends GdxTest {
 				score_labels.add(label);
 				
 				level_temp++;
+				
+				//Locked Images
+				Image locked_image = new Image(locked_texture);
+				locked_image.setPosition(x*spacing_x+offset_x, row_position_temp+offset_y);
+				locked_images.add(locked_image);
+				stage_menu.addActor(locked_image);
 			}
 			row_position_temp-=spacing_y;
 		}
@@ -291,6 +302,7 @@ public class TallerPlatformer extends GdxTest {
 		String pro_tips[] = {"El puntaje brilla cuando alcancanzas un nuevo score."
 				,"Puedes habilitar Swarm para competir con tu puntaje en l]nea."
 				,"Puedes silenciar la m%sica desde el men%."
+				,"Los puntajes se colorean en dorado al colectar todas las estrellas de un nivel."
 				,"Mientras tengas presionada la pantalla, la guacamaya seguir$ volando hacia arriba."
 				};
 		//$=á /=é ]=í @=ó %=ú
@@ -324,7 +336,7 @@ public class TallerPlatformer extends GdxTest {
 		stage_menu.addActor(mute_button);
 	}
 	
-	Image getLevelButton(int level)
+	Image createLevelButton(int level)
 	{
 		Image button = new Image(new Texture("menu/button"+level+".png"));
 		button.addListener(new MenuButtonListener(level,button));
@@ -712,7 +724,7 @@ public class TallerPlatformer extends GdxTest {
 		prefs.flush();
 	}
 	
-	int getScore(int level)
+	static int getScore(int level)
 	{
 //		return 0;
 		String level_str = ""+level;
@@ -724,19 +736,79 @@ public class TallerPlatformer extends GdxTest {
 		prefs = Gdx.app.getPreferences("scores");
 	}
 	
-	void updateScores()
+	static int getMaxScore(int level)
+	{
+		if(level==1)
+			return 81;
+		if(level==2)
+			return 57;
+		if(level==3)
+			return 72;
+		if(level==4)
+			return 132;
+		if(level==5)
+			return 275;
+		if(level==6)
+			return 137;
+		if(level==7)
+			return 277;
+		if(level==8)
+			return 208;
+		if(level==9)
+			return 129;
+		if(level==10)
+			return 243;
+		if(level==11)
+			return 234;
+		if(level==12)
+			return 116;
+		return -1;
+	}
+	
+	int getTotalScore()
 	{
 		int total_score=0;
+		for(int i=1;i<=12;i++)
+		{
+			total_score+=getScore(i);
+		}
+		return total_score;
+	}
+	
+	void updateScores()
+	{
 		int i=1;
 		for(Label l: score_labels)
 		{
 			int score_temp=getScore(i);
 			l.setText(""+score_temp+"pts");
+			if(score_temp>=getMaxScore(i))
+			{
+				l.setColor((218f/255f),(165f/255f),(32f/255f),1);
+			}else
+			{
+				l.setColor(0,0,0,1);
+			}
+			
 			i++;
-			total_score+=score_temp;
 		}
-		total_score_label.setText("Puntaje total: "+total_score);
+		
+		locked_images.get(0).setVisible(false);
+		for(int j=1;j<12;j++)
+		{
+			if(getScore(j)>=getMaxScore(j)/2)
+			{
+				locked_images.get(j).setVisible(false);
+//				level_buttons.get(j).setColor(Color.WHITE);
+			}else
+			{
+				locked_images.get(j).setVisible(true);
+//				level_buttons.get(j).setColor(Color.BLACK);
+			}
+		}
+		
+		total_score_label.setText("Puntaje total: "+getTotalScore());
 		if(androidFunctions.IsSwarmInitiated())
-			androidFunctions.SubmitScore(total_score);
+			androidFunctions.SubmitScore(getTotalScore());
 	}
 }

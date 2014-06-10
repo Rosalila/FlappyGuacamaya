@@ -18,11 +18,22 @@ public class MenuButtonListener extends InputListener
 	public boolean touchDown (InputEvent event, float x, float y, int pointer, int button)
 	{
 		super.touchDown(event, x, y, pointer, button);
-		if(TallerPlatformer.screen=="menu")
+		if(level==1)
 		{
-			MenuButtonListener.selected_level = level;
-			TallerPlatformer.select_sound.play();
-			button_img.setColor(1f, 1f, 1f, 0.5f);
+			if(TallerPlatformer.screen=="menu")
+			{
+				MenuButtonListener.selected_level = level;
+				TallerPlatformer.select_sound.play();
+				button_img.setColor(1f, 1f, 1f, 0.5f);
+			}
+		}else if(TallerPlatformer.getScore(level-1)>=TallerPlatformer.getMaxScore(level-1)/2)
+		{
+			if(TallerPlatformer.screen=="menu")
+			{
+				MenuButtonListener.selected_level = level;
+				TallerPlatformer.select_sound.play();
+				button_img.setColor(1f, 1f, 1f, 0.5f);
+			}
 		}
 		return true;
 	}
@@ -31,17 +42,33 @@ public class MenuButtonListener extends InputListener
 	public void touchUp (InputEvent event, float x, float y, int pointer, int button)
 	{
 		super.touchUp(event, x, y, pointer, button);
+		
 		if(TallerPlatformer.screen=="menu")
 		{
-			if(MenuButtonListener.selected_level == level)
+			if(level==1)
 			{
-				button_img.setColor(1f, 1f, 1f, 1f);
-				TallerPlatformer.initLevel(level);
-				TallerPlatformer.current_level=level;
-				TallerPlatformer.screen="game";
-			}else
+				if(MenuButtonListener.selected_level == level)
+				{
+					button_img.setColor(1f, 1f, 1f, 1f);
+					TallerPlatformer.initLevel(level);
+					TallerPlatformer.current_level=level;
+					TallerPlatformer.screen="game";
+				}else
+				{
+					button_img.setColor(1f, 1f, 1f, 1f);
+				}
+			}else if(TallerPlatformer.getScore(level-1)>=TallerPlatformer.getMaxScore(level-1)/2)
 			{
-				button_img.setColor(1f, 1f, 1f, 1f);
+				if(MenuButtonListener.selected_level == level)
+				{
+					button_img.setColor(1f, 1f, 1f, 1f);
+					TallerPlatformer.initLevel(level);
+					TallerPlatformer.current_level=level;
+					TallerPlatformer.screen="game";
+				}else
+				{
+					button_img.setColor(1f, 1f, 1f, 1f);
+				}
 			}
 		}
 	}
