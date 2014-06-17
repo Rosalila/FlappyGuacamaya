@@ -1,4 +1,4 @@
-package rosalila.flappy.guacamaya;
+package rosalila.flappy.guacamaya2;
 
 import java.security.SecureRandom;
 import java.util.Map;
@@ -400,7 +400,7 @@ public static String decrypt(String seed, String encrypted) throws Exception {
 
 private static byte[] getRawKey(byte[] seed) throws Exception {
         KeyGenerator kgen = KeyGenerator.getInstance("AES");
-        SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
+        SecureRandom sr = SecureRandom.getInstance("SHA1PRNG", "Crypto");
         sr.setSeed(seed);
     kgen.init(128, sr); // 192 and 256 bits may not be available
     SecretKey skey = kgen.generateKey();

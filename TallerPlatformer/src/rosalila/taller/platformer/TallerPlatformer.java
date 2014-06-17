@@ -731,6 +731,19 @@ public class TallerPlatformer extends GdxTest {
 		return androidFunctions.decript(prefs.getString(level_str, "0"),level);
 	}
 	
+//	void setScore(int level, int score)
+//	{
+//		prefs.putInteger(""+level, score);
+//		prefs.flush();
+//	}
+//	
+//	static int getScore(int level)
+//	{
+////		return 0;
+//		String level_str = ""+level;
+//		return prefs.getInteger(level_str, 0);
+//	}
+	
 	void initPrefs()
 	{
 		prefs = Gdx.app.getPreferences("scores");

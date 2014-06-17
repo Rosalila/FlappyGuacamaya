@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="rosalila.flappy.guacamaya"
+    package="rosalila.flappy.guacamaya2"
     android:versionCode="1"
     android:versionName="1.0" >
 
@@ -12,7 +12,7 @@
         <meta-data android:name="com.google.android.gms.version"
                android:value="@integer/google_play_services_version"/>
         <activity
-            android:name=".MainActivity"
+            android:name="rosalila.flappy.guacamaya2.MainActivity"
             android:label="@string/app_name"
             android:screenOrientation="portrait"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize">
